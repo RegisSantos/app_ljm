@@ -1,0 +1,95 @@
+name: app_ljm
+
+services:
+  app:
+    container_name: app_ljm_app
+    image: app_ljm_app:dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: "no"
+    ports:
+      - "80:80"
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - ljm_network
+
+  mysql:
+    container_name: app_ljm_mysql
+    image: mysql:8.4
+    restart: "no"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_DATABASE:-app_ljm}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - ljm_network
+
+  redis:
+    container_name: app_ljm_redis
+    image: redis:7-alpine
+    restart: "no"
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ljm_network
+
+  rabbitmq:
+    container_name: app_ljm_rabbitmq
+    image: rabbitmq:4-management
+    hostname: app-ljm-rabbitmq
+    restart: "no"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-app_ljm}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-secret}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    networks:
+      - ljm_network
+
+volumes:
+  mysql_data:
+    name: app_ljm_mysql_data
+  redis_data:
+    name: app_ljm_redis_data
+  rabbitmq_data:
+    name: app_ljm_rabbitmq_data
+
+networks:
+  ljm_network:
+    name: ljm_network
+    driver: bridge
