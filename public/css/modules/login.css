@@ -8,7 +8,42 @@ body {
     min-height: 100vh;
 }
 
-.shadow-custom {
+.login-container-custom {
     box-shadow: 0.3rem 0.3rem 1rem black;
-    background-color: rgba(50, 50, 50, 0.80);
+    background-color: rgba(50, 50, 50, 0.85);
+}
+
+.field-custom {
+    display: block;
+    width: 100%;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.2;
+    padding: 0.100rem 0.4rem 0.400rem 0.4rem;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-clip: padding-box;
+    transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+    outline: none;
+}
+
+.btn-login-custom {
+    display: inline-block;
+    font-weight: 400;
+    color: #fff;
+    text-align: center;
+    vertical-align: middle;
+    user-select: none;
+    background-color: #666;
+    padding: 0.370rem 0.75rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    border: none;
+    border-radius: 0.25rem;
+}
+
+.btn-login-custom:Hover {
+    background-color: #777;
+    transition: background-color .15s ease-in-out;
 }
