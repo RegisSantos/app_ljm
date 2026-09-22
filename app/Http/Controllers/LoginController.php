@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers;
 
-abstract class LoginController
+class LoginController extends Controller
 {
     // LoginController
+    public function index()
+    {
+        return view('login.login');
+    }
 }
