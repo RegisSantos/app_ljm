@@ -8,6 +8,8 @@
 ![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)
 ![RabbitMQ](https://img.shields.io/badge/RabbitMQ-4-FF6600?logo=rabbitmq&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-22-339933?logo=node.js&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
 
 Aplicação web em **PHP + Laravel** com arquitetura **MVC**, executada inteiramente em **containers Docker**. Para rodar o projeto, basta ter **Git** e **Docker** instalados: não é necessário instalar PHP, Composer, Node.js, MySQL, Redis ou RabbitMQ na sua máquina.
 
@@ -56,7 +58,10 @@ Aplicação web em **PHP + Laravel** com arquitetura **MVC**, executada inteiram
 |---|---|
 | HTML (views Blade) | Templates da aplicação |
 | CSS com Bootstrap | Estilização e layout |
+| Tailwind CSS 4 | Utilitários CSS processados pelo Vite |
 | JavaScript com jQuery | Interatividade |
+| Node.js 22 | Ambiente do container de desenvolvimento frontend |
+| Vite 8 | Build dos assets e servidor de desenvolvimento com HMR |
 
 ### Ferramentas de desenvolvimento
 
@@ -78,12 +83,14 @@ flowchart LR
 
     subgraph ljm_network ["Rede Docker: ljm_network"]
         App["app_ljm_app<br/>PHP 8.4 + Apache + Laravel 13"]
+        Node["app_ljm_node<br/>Node.js 22 + Vite"]
         MySQL[("app_ljm_mysql<br/>MySQL 8.4")]
         Redis[("app_ljm_redis<br/>Redis 7")]
         RabbitMQ["app_ljm_rabbitmq<br/>RabbitMQ 4"]
     end
 
     Browser --> App
+    Browser --> Node
     App --> MySQL
     App --> Redis
     App --> RabbitMQ
@@ -97,6 +104,7 @@ flowchart LR
 | `mysql` | `app_ljm_mysql` | `mysql:8.4` | 3306 | Banco de dados |
 | `redis` | `app_ljm_redis` | `redis:7-alpine` | 6379 | Cache e sessões |
 | `rabbitmq` | `app_ljm_rabbitmq` | `rabbitmq:4-management` | 5672 (AMQP) e 15672 (painel) | Mensageria |
+| `node` | `app_ljm_node` | `node:22` | 5173 | Servidor Vite para desenvolvimento e HMR |
 
 Os dados do MySQL, do Redis e do RabbitMQ ficam em volumes Docker nomeados (`app_ljm_mysql_data`, `app_ljm_redis_data` e `app_ljm_rabbitmq_data`) e persistem entre reinicializações.
 
@@ -140,7 +148,7 @@ docker --version
 docker compose version
 ```
 
-Portas livres na máquina: **80**, **3306**, **6379**, **5672** e **15672**. Se alguma estiver em uso, veja [Solução de problemas](#solução-de-problemas).
+Portas livres na máquina: **80**, **3306**, **6379**, **5672**, **5173** e **15672**. Se alguma estiver em uso, veja [Solução de problemas](#solução-de-problemas).
 
 ---
 
@@ -175,6 +183,14 @@ docker compose up -d --build
 
 Na primeira execução, o Docker baixa as imagens e constrói a imagem da aplicação, o que pode levar alguns minutos. O comando termina quando o MySQL, o Redis e o RabbitMQ estão saudáveis.
 
+O serviço `node` instala automaticamente as dependências do `package.json` e inicia o servidor de desenvolvimento do Vite em `http://localhost:5173`, com atualização automática dos assets durante o desenvolvimento.
+
+Confira também os logs do frontend quando necessário:
+
+```bash
+docker compose logs -f node
+```
+
 Confira o estado dos serviços:
 
 ```bash
@@ -182,6 +198,8 @@ docker compose ps
 ```
 
 Os quatro containers devem aparecer como `running`, e o `mysql`, o `redis` e o `rabbitmq` como `healthy`.
+
+Além desses serviços, o container `app_ljm_node` também deve aparecer como `running` para disponibilizar o servidor Vite na porta `5173`.
 
 ### 4. Instalar as dependências PHP
 
@@ -212,6 +230,14 @@ docker compose exec app php artisan db:show
 ```
 
 > **Linux (Docker Engine):** se aparecer erro de permissão em `storage/` ou `bootstrap/cache/`, execute `chmod -R ugo+rwX storage bootstrap/cache` na pasta do projeto. Isso não costuma ser necessário no Docker Desktop.
+
+> Os assets gerados pelo Vite ficam em `public/hot` durante o desenvolvimento e em `public/build` após um build de produção. Esses diretórios são gerados automaticamente e não são versionados.
+
+Para gerar os assets de produção dentro do container Node:
+
+```bash
+docker compose exec node npm run build
+```
 
 ---
 
@@ -255,7 +281,10 @@ docker compose stop
 | Remover containers, rede **e dados** deste projeto | `docker compose down -v` |
 | Ver o estado dos serviços | `docker compose ps` |
 | Acompanhar os logs da aplicação | `docker compose logs -f app` |
+| Acompanhar os logs do Vite | `docker compose logs -f node` |
 | Abrir um terminal dentro do container | `docker compose exec app bash` |
+| Instalar dependências frontend | `docker compose exec node npm install` |
+| Gerar build frontend | `docker compose exec node npm run build` |
 | Executar um comando do Artisan | `docker compose exec app php artisan <comando>` |
 | Executar um comando do Composer | `docker compose exec app composer <comando>` |
 | Rodar os testes | `docker compose exec app php artisan test` |
@@ -291,6 +320,8 @@ app_ljm/
 ├── .env.example             # Modelo de variáveis de ambiente
 ├── Dockerfile               # Imagem da aplicação (PHP 8.4 + Apache)
 ├── docker-compose.yml       # Serviços, rede e volumes
+├── package.json              # Scripts e dependências frontend
+├── vite.config.js            # Configuração do Vite
 └── README.md
 ```
 
@@ -309,7 +340,7 @@ app_ljm/
 
 | Problema | Causa provável | Solução |
 |---|---|---|
-| `port is already allocated` ou `address already in use` ao subir | Outra aplicação usa uma das portas (80, 3306, 6379, 5672 ou 15672) | Encerre o outro serviço ou container, ou altere a porta do lado esquerdo em `ports:` no `docker-compose.yml` (por exemplo, `"8080:80"`) e ajuste o `APP_URL` no `.env` |
+| `port is already allocated` ou `address already in use` ao subir | Outra aplicação usa uma das portas (80, 3306, 6379, 5173, 5672 ou 15672) | Encerre o outro serviço ou container, ou altere a porta do lado esquerdo em `ports:` no `docker-compose.yml` (por exemplo, `"8080:80"`) e ajuste o `APP_URL` no `.env` |
 | Erro 500 ou `vendor/autoload.php` não encontrado | Dependências ainda não instaladas | `docker compose exec app composer install` |
 | `No application encryption key has been specified` | Chave da aplicação não gerada | `docker compose exec app php artisan key:generate` |
 | `Permission denied` em `storage/` ou `bootstrap/cache/` | Permissões da pasta no Linux | `chmod -R ugo+rwX storage bootstrap/cache` |

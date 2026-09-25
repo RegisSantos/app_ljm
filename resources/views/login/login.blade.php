@@ -34,6 +34,7 @@
                                     <strong>{{ $message }}</strong>
                                 </span>
                             @enderror
+                        </fieldset>
                     </div>
 
                     <button type="submit" class="btn btn-login-custom w-100">Entrar</button>
