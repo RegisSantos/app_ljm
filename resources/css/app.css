@@ -11,3 +11,11 @@
 .c-pointer {
     cursor: pointer !important;
 }
+
+#fPass:hover {
+    color: #80ff80 !important;
+}
+
+.fs-7 {
+    font-size: 0.875rem !important;
+}
