@@ -219,7 +219,15 @@ docker compose exec app php artisan key:generate
 docker compose exec app php artisan migrate
 ```
 
-### 7. Acessar a aplicação
+### 7. Criar o usuário de teste
+
+```bash
+docker compose exec app php artisan db:seed
+```
+
+O seeder padrão cria o usuário de teste `test@example.com`. Evite executar esse comando mais de uma vez, pois o e-mail é fixo e único.
+
+### 8. Acessar a aplicação
 
 Abra **http://localhost** no navegador. A página inicial do Laravel deve ser exibida.
 
