@@ -1,3 +1,12 @@
+FROM node:22-bookworm-slim AS frontend
+
+WORKDIR /var/www/html
+
+COPY . .
+
+RUN npm install \
+    && npm run build
+
 FROM php:8.4-apache
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -12,3 +21,9 @@ COPY docker/apache/000-default.conf /etc/apache2/sites-available/000-default.con
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
+
+COPY . .
+
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader
+
+COPY --from=frontend /var/www/html/public/build ./public/build

@@ -12,6 +12,17 @@ services:
       - "80:80"
     volumes:
       - .:/var/www/html
+      - app_vendor:/var/www/html/vendor
+      - app_build:/var/www/html/public/build
+    environment:
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-app_ljm}
+      DB_USERNAME: root
+      DB_PASSWORD: ${DB_PASSWORD:-root}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     depends_on:
       mysql:
         condition: service_healthy
@@ -95,6 +106,10 @@ services:
       - ljm_network
 
 volumes:
+  app_vendor:
+    name: app_ljm_vendor
+  app_build:
+    name: app_ljm_public_build
   mysql_data:
     name: app_ljm_mysql_data
   redis_data:
