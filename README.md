@@ -52,6 +52,8 @@ Aplicação web em **PHP + Laravel** com arquitetura **MVC**, executada inteiram
 | RabbitMQ | 4 (com painel de administração) | Mensageria e filas |
 | Docker / Docker Compose | — | Orquestração dos containers e da rede interna `ljm_network` |
 
+As sessões técnicas das requisições web e o cache usam Redis. A tabela MySQL `si_sessions` fica reservada ao histórico de login/logout; a gravação desses eventos será implementada junto ao controle de autenticação. As tabelas de fila (`jobs`, `job_batches` e `failed_jobs`) permanecem no MySQL porque `QUEUE_CONNECTION=database`.
+
 ### Frontend
 
 | Tecnologia | Uso |

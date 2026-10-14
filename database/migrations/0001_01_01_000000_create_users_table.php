@@ -28,14 +28,6 @@ return new class extends Migration
             $table->timestamp('created_at')->nullable();
         });
 
-        Schema::create('si_sessions', function (Blueprint $table) {
-            $table->string('id')->primary();
-            $table->foreignId('user_id')->nullable()->index();
-            $table->string('ip_address', 45)->nullable();
-            $table->text('user_agent')->nullable();
-            $table->longText('payload');
-            $table->integer('last_activity')->index();
-        });
     }
 
     /**
@@ -45,6 +37,5 @@ return new class extends Migration
     {
         Schema::dropIfExists('si_users');
         Schema::dropIfExists('password_reset_tokens');
-        Schema::dropIfExists('si_sessions');
     }
 };
