@@ -11,13 +11,13 @@
                     <h3 class="fw-semibold">Login</h3>
                 </div>
                 <div>
-                    <form method="POST" action="#">
+                    <form method="POST" action="{{ route('login.authenticate') }}">
                         @csrf
 
                         <div class="mb-1">
                             <fieldset class="border rounded-2 px-2 py-0 m-1">
                                 <legend class="float-none w-auto m-0 px-1 fs-6">Email</legend>
-                                <input type="email" id="iUser" name="iUser" class="field-custom mb-1 @error('email') is-invalid @enderror" placeholder="código ou email" maxlength="50" required>
+                                <input type="text" id="iUser" name="iUser" class="field-custom mb-1 @error('email') is-invalid @enderror" placeholder="código ou email" maxlength="50" required>
                                 @error('email')
                                     <span class="invalid-feedback" role="alert">
                                         <strong>{{ $message }}</strong>
