@@ -20,14 +20,21 @@ document.addEventListener("DOMContentLoaded", (event) => {
   $('#fPass').on('click', function() {
     
     // Oculta o passo 1 e mostra o passo 2
-    $('#step-1').removeClass('d-block').addClass('d-none');
-    $('#step-2').removeClass('d-none').addClass('d-block');
+    if (typeof window.toggleFade === 'function') {
+      window.toggleFade('step-1', 'step-2');
+    } else {
+      console.error('A função Window.toggleFade não está disponível');
+    }
+    
   });
 
   $('#backToLogin').on('click', function() {
     
     // Oculta o passo 2 e mostra o passo 1
-    $('#step-2').removeClass('d-block').addClass('d-none');
-    $('#step-1').removeClass('d-none').addClass('d-block');
+    if (typeof window.toggleFade === 'function') {
+      window.toggleFade('step-2', 'step-1');
+    } else {
+      console.error('A função Window.toggleFade não está disponível');
+    }
   });
 });

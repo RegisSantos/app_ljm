@@ -52,7 +52,7 @@ Aplicação web em **PHP + Laravel** com arquitetura **MVC**, executada inteiram
 | RabbitMQ | 4 (com painel de administração) | Mensageria e filas |
 | Docker / Docker Compose | — | Orquestração dos containers e da rede interna `ljm_network` |
 
-As sessões técnicas das requisições web e o cache usam Redis. A tabela MySQL `si_sessions` fica reservada ao histórico de login/logout; a gravação desses eventos será implementada junto ao controle de autenticação. As tabelas de fila (`jobs`, `job_batches` e `failed_jobs`) permanecem no MySQL porque `QUEUE_CONNECTION=database`.
+As sessões técnicas das requisições web e o cache usam Redis. A tabela MySQL `si_sessions` fica reservada ao histórico de login/logout; a gravação desses eventos será implementada junto ao controle de autenticação. As tabelas de fila (`jobs`, `job_batches` e `failed_jobs`) permanecem no MySQL porque `QUEUE_CONNECTION=database`. O RabbitMQ está disponível como serviço Docker, mas ainda não está integrado ao Laravel.
 
 ### Frontend
 
@@ -95,7 +95,6 @@ flowchart LR
     Browser --> Node
     App --> MySQL
     App --> Redis
-    App --> RabbitMQ
 ```
 
 ### Serviços
@@ -105,7 +104,7 @@ flowchart LR
 | `app` | `app_ljm_app` | `app_ljm_app:dev` (build local do `Dockerfile`) | 80 | Aplicação Laravel servida pelo Apache |
 | `mysql` | `app_ljm_mysql` | `mysql:8.4` | 3306 | Banco de dados |
 | `redis` | `app_ljm_redis` | `redis:7-alpine` | 6379 | Cache e sessões |
-| `rabbitmq` | `app_ljm_rabbitmq` | `rabbitmq:4-management` | 5672 (AMQP) e 15672 (painel) | Mensageria |
+| `rabbitmq` | `app_ljm_rabbitmq` | `rabbitmq:4-management` | 5672 (AMQP) e 15672 (painel) | Mensageria (ainda sem integração com o Laravel) |
 | `node` | `app_ljm_node` | `node:22` | 5173 | Servidor Vite para desenvolvimento e HMR |
 
 Os dados do MySQL, do Redis e do RabbitMQ ficam em volumes Docker nomeados (`app_ljm_mysql_data`, `app_ljm_redis_data` e `app_ljm_rabbitmq_data`) e persistem entre reinicializações.
@@ -131,7 +130,8 @@ Projeto em fase inicial de desenvolvimento.
 | MySQL 8.4 conectado ao Laravel | Pronto |
 | Redis para cache e sessões | Pronto |
 | RabbitMQ (container e variáveis de ambiente) | Serviço provisionado; a integração de filas com o Laravel ainda não foi feita (`QUEUE_CONNECTION=database`) |
-| Bootstrap e jQuery | Stack definida; integração prevista para as próximas etapas |
+| Bootstrap e Bootstrap Icons | Carregados nas views via CDN |
+| jQuery | Carregado via CDN e usado na tela de login |
 
 ---
 
@@ -175,7 +175,7 @@ cp .env.example .env
 
 No Windows (PowerShell): `Copy-Item .env.example .env`
 
-O `.env.example` já vem configurado para os containers (host do banco `mysql`, do Redis `redis` e do RabbitMQ `rabbitmq`). Não é preciso alterar nada para rodar localmente.
+O `.env.example` já vem configurado para os containers, com o banco no host `mysql` e o Redis no host `redis`. O RabbitMQ está disponível no Compose, mas ainda não está configurado como conexão de filas da aplicação. Não é preciso alterar o arquivo `.env` para rodar localmente.
 
 ### 3. Construir e subir os containers
 
@@ -183,9 +183,9 @@ O `.env.example` já vem configurado para os containers (host do banco `mysql`, 
 docker compose up -d --build
 ```
 
-Na primeira execução, o Docker baixa as imagens e constrói a imagem da aplicação, o que pode levar alguns minutos. O comando termina quando o MySQL, o Redis e o RabbitMQ estão saudáveis.
+Na primeira execução, o Docker baixa as imagens e constrói a imagem da aplicação, o que pode levar alguns minutos. O Dockerfile instala as dependências PHP com Composer e gera o build dos assets frontend. O Compose aguarda MySQL, Redis e RabbitMQ ficarem saudáveis antes de iniciar a aplicação.
 
-O serviço `node` instala automaticamente as dependências do `package.json` e inicia o servidor de desenvolvimento do Vite em `http://localhost:5173`, com atualização automática dos assets durante o desenvolvimento.
+O serviço `node` também instala as dependências do `package.json` e inicia o servidor de desenvolvimento do Vite em `http://localhost:5173`, com atualização automática dos assets durante o desenvolvimento.
 
 Confira também os logs do frontend quando necessário:
 
@@ -199,39 +199,31 @@ Confira o estado dos serviços:
 docker compose ps
 ```
 
-Os quatro containers devem aparecer como `running`, e o `mysql`, o `redis` e o `rabbitmq` como `healthy`.
+Os cinco containers devem aparecer como `running`; os serviços `mysql`, `redis` e `rabbitmq` também devem aparecer como `healthy`.
 
-Além desses serviços, o container `app_ljm_node` também deve aparecer como `running` para disponibilizar o servidor Vite na porta `5173`.
-
-### 4. Instalar as dependências PHP
-
-```bash
-docker compose exec app composer install
-```
-
-### 5. Gerar a chave da aplicação
+### 4. Gerar a chave da aplicação
 
 ```bash
 docker compose exec app php artisan key:generate
 ```
 
-### 6. Criar as tabelas do banco de dados
+### 5. Criar as tabelas do banco de dados
 
 ```bash
 docker compose exec app php artisan migrate
 ```
 
-### 7. Criar o usuário de teste
+### 6. Criar o usuário inicial (opcional)
 
 ```bash
 docker compose exec app php artisan db:seed
 ```
 
-O seeder padrão cria o usuário de teste `test@example.com`. Evite executar esse comando mais de uma vez, pois o e-mail é fixo e único.
+O seeder cria o usuário `admin@ljmarcenaria.com` com a senha inicial `password`. A inserção ignora conflitos, sem sobrescrever um registro já existente. **A tela de login ainda é apenas visual: autenticação não está implementada, então essas credenciais não permitem entrar no sistema.**
 
-### 8. Acessar a aplicação
+### 7. Acessar a aplicação
 
-Abra **http://localhost** no navegador. A página inicial do Laravel deve ser exibida.
+Abra **http://localhost** no navegador. A rota inicial exibe a tela de login em desenvolvimento.
 
 Para confirmar que o Laravel está conectado ao MySQL:
 
@@ -243,7 +235,7 @@ docker compose exec app php artisan db:show
 
 > Os assets gerados pelo Vite ficam em `public/hot` durante o desenvolvimento e em `public/build` após um build de produção. Esses diretórios são gerados automaticamente e não são versionados.
 
-Para gerar os assets de produção dentro do container Node:
+Para gerar novamente os assets de produção dentro do container Node:
 
 ```bash
 docker compose exec node npm run build
@@ -256,11 +248,11 @@ docker compose exec node npm run build
 | Recurso | Endereço | Usuário | Senha |
 |---|---|---|---|
 | Aplicação | http://localhost | — | — |
-| Painel do RabbitMQ | http://localhost:15672 | `guest` | `guest` |
+| Painel do RabbitMQ | http://localhost:15672 | `app_ljm` | `secret` |
 | MySQL | `127.0.0.1:3306`, banco `app_ljm` | `root` | `root` |
 | Redis | `127.0.0.1:6379` | — | sem senha |
 
-> Estas credenciais servem **somente para o ambiente local de desenvolvimento**. Nunca as utilize em um ambiente acessível pela internet.
+> As credenciais acima são os valores padrão do ambiente local e podem ser alteradas pelas variáveis `RABBITMQ_USER` e `RABBITMQ_PASSWORD` no `.env`. Use credenciais próprias em outros ambientes e não exponha esses serviços diretamente à internet.
 
 Para consultar o banco com um cliente gráfico (por exemplo, o MySQL Workbench), crie uma conexão TCP/IP com host `127.0.0.1`, porta `3306`, usuário `root` e senha `root`. O Workbench pode exibir um aviso de versão não suportada com o MySQL 8.4; é possível continuar normalmente.
 
@@ -278,6 +270,14 @@ docker compose up -d
 docker compose stop
 ```
 
+### Manutenção das dependências PHP (opcional)
+
+Não é necessário executar este comando na instalação inicial: o `Dockerfile` instala as dependências PHP durante a construção da imagem. Execute-o quando `composer.json` ou `composer.lock` forem alterados, pois o volume `vendor` pode manter dependências da instalação anterior:
+
+```bash
+docker compose exec app composer install
+```
+
 ---
 
 ## Comandos úteis
@@ -293,7 +293,7 @@ docker compose stop
 | Acompanhar os logs da aplicação | `docker compose logs -f app` |
 | Acompanhar os logs do Vite | `docker compose logs -f node` |
 | Abrir um terminal dentro do container | `docker compose exec app bash` |
-| Instalar dependências frontend | `docker compose exec node npm install` |
+| Instalar/atualizar dependências frontend | `docker compose exec node npm install` |
 | Gerar build frontend | `docker compose exec node npm run build` |
 | Executar um comando do Artisan | `docker compose exec app php artisan <comando>` |
 | Executar um comando do Composer | `docker compose exec app composer <comando>` |
@@ -351,7 +351,7 @@ app_ljm/
 | Problema | Causa provável | Solução |
 |---|---|---|
 | `port is already allocated` ou `address already in use` ao subir | Outra aplicação usa uma das portas (80, 3306, 6379, 5173, 5672 ou 15672) | Encerre o outro serviço ou container, ou altere a porta do lado esquerdo em `ports:` no `docker-compose.yml` (por exemplo, `"8080:80"`) e ajuste o `APP_URL` no `.env` |
-| Erro 500 ou `vendor/autoload.php` não encontrado | Dependências ainda não instaladas | `docker compose exec app composer install` |
+| Erro 500 ou `vendor/autoload.php` não encontrado | Dependências PHP ausentes ou desatualizadas | `docker compose exec app composer install` (ou reconstrua a imagem com `docker compose up -d --build`) |
 | `No application encryption key has been specified` | Chave da aplicação não gerada | `docker compose exec app php artisan key:generate` |
 | `Permission denied` em `storage/` ou `bootstrap/cache/` | Permissões da pasta no Linux | `chmod -R ugo+rwX storage bootstrap/cache` |
 | MySQL demora a ficar `healthy` | Primeira inicialização do banco | Aguarde de 30 a 60 segundos e verifique com `docker compose logs mysql` |
