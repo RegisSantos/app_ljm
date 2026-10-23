@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Run the migrations.
+     * Rodar as migrations.
      */
     public function up(): void
     {
@@ -15,9 +15,11 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('code')->unique();
             $table->string('name');
-            $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
+            $table->string('email')->unique();            
             $table->string('password');
+            $table->unsignedTinyInteger('status')
+                ->default(1)
+                ->comment('1: ativo, 0: inativo');
             $table->rememberToken();
             $table->timestamps();
         });
@@ -31,7 +33,7 @@ return new class extends Migration
     }
 
     /**
-     * Reverse the migrations.
+     * Reverter as migrations.
      */
     public function down(): void
     {

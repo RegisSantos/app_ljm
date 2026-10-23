@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 class DatabaseSeeder extends Seeder
 {
     /**
-     * Seed the application's database.
+     * Popular o banco de dados da aplicação com o usuário padrão.
      */
     public function run(): void
     {
@@ -19,8 +19,8 @@ class DatabaseSeeder extends Seeder
             'code' => 1001,
             'name' => 'Admin',
             'email' => 'admin@ljmarcenaria.com',
-            'email_verified_at' => now(),
             'password' => Hash::make('password'),
+            'status' => 1,
             'remember_token' => Str::random(10),
             'created_at' => now(),
             'updated_at' => now(),
